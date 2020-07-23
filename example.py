@@ -17,7 +17,7 @@ metric = 'validity,sas'
 n_samples = 5000
 z_dim = 8
 epochs = 10
-save_every = 1 # May lead to errors if left as None
+save_every = 1  # May lead to errors if left as None
 
 data = SparseMolecularDataset()
 data.load('data/gdb9_9nodes.sparsedataset')
@@ -185,7 +185,10 @@ model = GraphGANModel(data.vertexes,
                       discriminator=encoder_rgcn,
                       soft_gumbel_softmax=False,
                       hard_gumbel_softmax=False,
-                      batch_discriminator=False)
+                      batch_discriminator=False,
+                      batch=batch_dim)
+
+model()
 
 # optimizer
 optimizer = GraphGANOptimizer(model, learning_rate=1e-3, feature_matching=False)
@@ -199,7 +202,7 @@ trainer = Trainer(model, optimizer, session)
 
 print('Parameters: {}'.format(np.sum([np.prod(e.shape) for e in session.run(tf.trainable_variables())])))
 
-trainer.train(batch_dim=batch_dim,
+trainer.train(batch_dim=batch_dim,     # 128
               epochs=epochs,
               steps=steps,
               train_fetch_dict=train_fetch_dict,
@@ -209,6 +212,6 @@ trainer.train(batch_dim=batch_dim,
               test_fetch_dict=test_fetch_dict,
               test_feed_dict=test_feed_dict,
               save_every=save_every,
-              directory='', # here users need to first create and then specify a folder where to save the model
+              directory='',  # here users need to first create and then specify a folder where to save the model
               _eval_update=_eval_update,
               _test_update=_test_update)
