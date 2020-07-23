@@ -39,7 +39,7 @@ class Trainer:
         self.print = pickle.load(open('{}/{}.pkl'.format(directory, 'trainer'), 'rb'))
         self.log('Model loaded from {}!'.format(directory))
 
-    def train(self, batch_dim, epochs, steps,
+    def train(self, batch_dim, epochs, steps,     # 128, 10,  steps=(len(data) // batch_dim)
               train_fetch_dict, train_feed_dict,
               eval_fetch_dict, eval_feed_dict,
               test_fetch_dict, test_feed_dict,
@@ -47,7 +47,7 @@ class Trainer:
               _train_update=None, _eval_update=None, _test_update=None,
               eval_batch=None, test_batch=None,
               best_fn=None, min_epochs=None, look_ahead=None,
-              save_every=None, directory=None,
+              save_every=None, directory=None,      # directory: folder for save models
               skip_first_eval=False):
 
         if _train_step is None:

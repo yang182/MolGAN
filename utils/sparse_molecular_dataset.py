@@ -31,12 +31,14 @@ class SparseMolecularDataset():
 
     def save(self, filename):
         with open(filename, 'wb') as f:
+            print("self idct: ", self.__dict__)
             pickle.dump(self.__dict__, f)
 
     def generate(self, filename, add_h=False, filters=lambda x: True, size=None, validation=0.1, test=0.1):
         self.log('Extracting {}..'.format(filename))
 
         if filename.endswith('.sdf'):
+            print("begin data")
             self.data = list(filter(lambda x: x is not None, Chem.SDMolSupplier(filename)))
         elif filename.endswith('.smi'):
             self.data = [Chem.MolFromSmiles(line) for line in open(filename, 'r').readlines()]
@@ -87,7 +89,7 @@ class SparseMolecularDataset():
 
         # a (N, 9, 9) matrix where N is the length of the dataset and each  9x9 matrix contains the 
         # eigenvectors of the correspondent Laplacian matrix
-        self.data_Lv = np.stack(self.data_Lv) 
+        self.data_Lv = np.stack(self.data_Lv)
 
         self.vertexes = self.data_F.shape[-2]
         self.features = self.data_F.shape[-1]
@@ -145,14 +147,14 @@ class SparseMolecularDataset():
             if A is not None:
                 data.append(mol)
                 smiles.append(Chem.MolToSmiles(mol))
-                data_S.append(self._genS(mol, max_length=max_length_s))
+                data_S.append(self._genS(mol, max_length=max_length_s))         # smile character encoder
                 data_A.append(A)
-                data_X.append(self._genX(mol, max_length=max_length))
+                data_X.append(self._genX(mol, max_length=max_length))          # atom number encoder
                 data_D.append(D)
-                data_F.append(self._genF(mol, max_length=max_length))
+                data_F.append(self._genF(mol, max_length=max_length))               # atom feature
 
-                L = np.diag(D) - A
-                Le, Lv = np.linalg.eigh(L)
+                L = np.diag(D) - A          # laplacian matrix
+                Le, Lv = np.linalg.eigh(L)     # eigenvalues and eigenvectors
 
                 data_Le.append(Le)
                 data_Lv.append(Lv)
@@ -209,11 +211,11 @@ class SparseMolecularDataset():
         max_length = max_length if max_length is not None else mol.GetNumAtoms()
 
         features = np.array([[*[a.GetDegree() == i for i in range(5)],
-                              *[a.GetExplicitValence() == i for i in range(9)],
-                              *[int(a.GetHybridization()) == i for i in range(1, 7)],
-                              *[a.GetImplicitValence() == i for i in range(9)],
-                              a.GetIsAromatic(),
-                              a.GetNoImplicit(),
+                              *[a.GetExplicitValence() == i for i in range(9)],            # 原子显示价
+                              *[int(a.GetHybridization()) == i for i in range(1, 7)],       # H的数目
+                              *[a.GetImplicitValence() == i for i in range(9)],  # 原子上隐式H的数目
+                              a.GetIsAromatic(),                # 芳香性
+                              a.GetNoImplicit(),                # 是否允许有隐式H
                               *[a.GetNumExplicitHs() == i for i in range(5)],
                               *[a.GetNumImplicitHs() == i for i in range(5)],
                               *[a.GetNumRadicalElectrons() == i for i in range(5)],
@@ -323,8 +325,8 @@ class SparseMolecularDataset():
 
 if __name__ == '__main__':
     data = SparseMolecularDataset()
-    data.generate('data/gdb9.sdf', filters=lambda x: x.GetNumAtoms() <= 9)
-    data.save('data/gdb9_9nodes.sparsedataset')
+    data.generate('../data/gdb9.sdf', filters=lambda x: x.GetNumAtoms() <= 9)
+    data.save('../data/gdb9_9nodes.sparsedataset')
 
     # data = SparseMolecularDataset()
     # data.generate('data/qm9_5k.smi', validation=0.00021, test=0.00021)  # , filters=lambda x: x.GetNumAtoms() <= 9)
