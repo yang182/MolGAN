@@ -9,6 +9,22 @@ class GraphVAEModel:
 
     def __init__(self, vertexes, edges, nodes, features, embedding_dim, encoder_units, decoder_units, variational,
                  encoder, decoder, soft_gumbel_softmax=False, hard_gumbel_softmax=False, with_features=True):
+        """
+
+        :param vertexes:  the atoms num of molecular
+        :param edges: the bond num
+        :param nodes: the atom num type
+        :param features:
+        :param embedding_dim:
+        :param encoder_units:
+        :param decoder_units:
+        :param variational:
+        :param encoder:
+        :param decoder:
+        :param soft_gumbel_softmax:
+        :param hard_gumbel_softmax:
+        :param with_features:
+        """
         self.vertexes, self.nodes, self.edges, self.embedding_dim, self.encoder, self.decoder = \
             vertexes, nodes, edges, embedding_dim, encoder, decoder
 

@@ -1,21 +1,22 @@
 import tensorflow as tf
+from tensorflow import keras
 from utils.layers import multi_graph_convolution_layers, graph_aggregation_layer, multi_dense_layers
 
 
-def encoder_rgcn(inputs, units, training, dropout_rate=0.):
+def encoder_rgcn(inputs, units, training=False, dropout_rate=0.):
     graph_convolution_units, auxiliary_units = units
 
-    with tf.variable_scope('graph_convolutions'):
-        output = multi_graph_convolution_layers(inputs, graph_convolution_units, activation=tf.nn.tanh,
-                                                dropout_rate=dropout_rate, training=training)
+    # with tf.variable_scope('graph_convolutions'):
+    output = multi_graph_convolution_layers(inputs, graph_convolution_units, activation=tf.nn.tanh,
+                                            dropout_rate=dropout_rate, training=training)
 
-    with tf.variable_scope('graph_aggregation'):
-        _, hidden_tensor, node_tensor = inputs
-        annotations = tf.concat(
-            (output, hidden_tensor, node_tensor) if hidden_tensor is not None else (output, node_tensor), -1)
+    # with tf.variable_scope('graph_aggregation'):
+    _, hidden_tensor, node_tensor = inputs
+    annotations = tf.concat(
+        (output, hidden_tensor, node_tensor) if hidden_tensor is not None else (output, node_tensor), -1)
 
-        output = graph_aggregation_layer(annotations, auxiliary_units, activation=tf.nn.tanh,
-                                         dropout_rate=dropout_rate, training=training)
+    output = graph_aggregation_layer(annotations, auxiliary_units, activation=tf.nn.tanh,
+                                     dropout_rate=dropout_rate, training=training)
 
     return output
 
@@ -23,16 +24,18 @@ def encoder_rgcn(inputs, units, training, dropout_rate=0.):
 def decoder_adj(inputs, units, vertexes, edges, nodes, training, dropout_rate=0.):
     output = multi_dense_layers(inputs, units, activation=tf.nn.tanh, dropout_rate=dropout_rate, training=training)
 
-    with tf.variable_scope('edges_logits'):
-        edges_logits = tf.reshape(tf.layers.dense(inputs=output, units=edges * vertexes * vertexes,
-                                                  activation=None), (-1, edges, vertexes, vertexes))
-        edges_logits = tf.transpose((edges_logits + tf.matrix_transpose(edges_logits)) / 2, (0, 2, 3, 1))
-        edges_logits = tf.layers.dropout(edges_logits, dropout_rate, training=training)
+    # with tf.variable_scope('edges_logits'):
+    edges_logits = tf.reshape(keras.layers.Dense(units=edges * vertexes * vertexes,
+                                              activation=None)(output), (-1, edges, vertexes, vertexes))
 
-    with tf.variable_scope('nodes_logits'):
-        nodes_logits = tf.layers.dense(inputs=output, units=vertexes * nodes, activation=None)
-        nodes_logits = tf.reshape(nodes_logits, (-1, vertexes, nodes))
-        nodes_logits = tf.layers.dropout(nodes_logits, dropout_rate, training=training)
+    edges_logits = tf.transpose((edges_logits + tf.transpose(edges_logits, (0, 1, 3, 2))) / 2, (0, 2, 3, 1))
+
+    edges_logits = keras.layers.Dropout(dropout_rate)(edges_logits, training=training)
+
+    # with tf.variable_scope('nodes_logits'):
+    nodes_logits = keras.layers.Dense(units=vertexes * nodes, activation=None)(inputs=output)
+    nodes_logits = tf.reshape(nodes_logits, (-1, vertexes, nodes))
+    nodes_logits = keras.layers.Dropout(dropout_rate)(nodes_logits, training=training)
 
     return edges_logits, nodes_logits
 
@@ -89,7 +92,7 @@ def postprocess_logits(inputs, temperature=1.):
                for e_logits in listify(inputs)]
     argmax = [tf.one_hot(tf.argmax(e_logits, axis=-1), depth=e_logits.shape[-1], dtype=e_logits.dtype)
               for e_logits in listify(inputs)]
-    gumbel_logits = [e_logits - tf.log(- tf.log(tf.random_uniform(tf.shape(e_logits), dtype=e_logits.dtype)))
+    gumbel_logits = [e_logits - tf.math.log(- tf.math.log(tf.random.uniform(tf.shape(e_logits), dtype=e_logits.dtype)))
                      for e_logits in listify(inputs)]
     gumbel_softmax = [tf.nn.softmax(e_gumbel_logits / temperature)
                       for e_gumbel_logits in gumbel_logits]
